@@ -64,6 +64,16 @@ hide_legend() %>%
   layout(title = "Distribution Chart - Histogram and Boxplot",
          yaxis = list(title = "Frequency"))
 
+#Top 5 states with high fatality rates
+allData %>% 
+  select(STATENAME, FATALS) %>% 
+  arrange(desc(FATALS)) %>% 
+  head(5)
+#Top 5 states with low fatality rates
+allData %>% 
+  select((STATENAME), FATALS) %>% 
+  arrange(FATALS) %>% 
+  head(5)
 
 #Add Icon/Logo along with the title in the header
 title <- tags$a(href='https://www.google.com',
@@ -125,7 +135,10 @@ ui <- dashboardPage(
       #Second tab item
       tabItem(tabName = "vis",
               tabBox(id = "t2", width = 12, 
-                     tabPanel(title = "Some Trends Per State", value = "trends", plotlyOutput("bar")),
+                     tabPanel(title = "Some Trends Per State", value = "trends", 
+                              fluidRow(tags$div(align="center"), box(collapsible = TRUE, status = "primary", collapsed = TRUE, solidHeader = TRUE),
+                                       tags$div(align="center"), box(collapsible = TRUE, status = "primary", collapsed = TRUE, solidHeader = TRUE)),
+                              plotlyOutput("bar")),
                      tabPanel(title = "Distribution", value = "distro", plotlyOutput("histplot")),
                      tabPanel(title = "Correlation Matrix", plotlyOutput("cor")),
                      tabPanel(title = "Relationship among var 1 & var 2", value = "relation", 
