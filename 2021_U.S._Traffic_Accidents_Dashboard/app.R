@@ -83,7 +83,9 @@ ui <- dashboardPage(
       id = "sidebar",
       menuItem("Dataset", tabName = "data", icon = icon("database")),
       menuItem(text = "Visualizations", tabName = "vis", icon = icon("chart-line")),
-      selectInput(inputId = "var1", label = "Select the variable", choices = c1, selected = "VNUM_LANNAME"),
+      conditionalPanel("input.sidebar == 'vis' && input.t2 == 'distro'", selectInput(inputId = "var1", label = "Select the variable", choices = c1, selected = "VNUM_LANNAME")),
+      conditionalPanel("input.sidebar == 'vis' && input.t2 == 'relation'", selectInput(inputId = "var3", label = "Select the X variable", choices = c1, selected = "FATALS")),
+      conditionalPanel("input.sidebar == 'vis' && input.t2 == 'relation'", selectInput(inputId = "var4", label = "Select the Y variable", choices = c1, selected = "VSPD_LIM")),
       menuItem(text = "Chloropleth Map", tabName = "map", icon = icon("map")),
       menuItem("Homepage", tabName = "tab1"),
       menuItem("Location", tabName = "tab2"),
@@ -124,10 +126,12 @@ ui <- dashboardPage(
                      tabPanel(title = "Some Trends Per State", value = "trends", h4("tabPanel 1 placeholder ")),
                      tabPanel(title = "Distribution", value = "distro", plotlyOutput("histplot")),
                      tabPanel(title = "Correlation Matrix", h4("tabPanel 1 placeholder ")),
-                     tabPanel(title = "Relationship among var 1 & var 2", value = "relation", h4("tabPanel 1 placeholder "))
-                     )
-              ),
-      #Third tabItem
+                     tabPanel(title = "Relationship among var 1 & var 2", value = "relation", 
+                              radioButtons(inputId = "fit", label = "Select smooth method", choices = c("loess", "lm"), selected = "lm", inline = TRUE),
+                              plotlyOutput("scatter"))
+                     )#tabBox
+                     ),
+                    #Third tabItem
       tabItem(tabName = "map",
               box(h1("placeholder"))
               ),
@@ -233,17 +237,18 @@ server <- function(input, output, session) {
     names()
   
 #Creating scatter plot for relationships using ggplot
-  allData %>% 
-    ggplot(aes(x=FATALS, y=VSPD_LIM)) + 
+  output$scatter <- renderPlotly({
+p = allData %>% 
+    ggplot(aes(x=get(input$var3), y=get(input$var4))) + 
     geom_point() +
-    geom_smooth(method = "lm") +
-    labs(title = "Relationship Between Speed Limit and Fatalities",
-         x = "Fatalities",
-         y = "Speed Limit") + 
+    geom_smooth(method=get(input$fit)) +
+    labs(title = paste("Relationship Between", input$var3, "and", input$var4),
+         x = input$var3,
+         y = input$var4) + 
     theme(plot.title = element_textbox_simple(size = 10,
                                               halign = 0.5))
-  
-  
+  ggplotly(p)
+  })
   # observe({
   #   updateSelectInput(session, "select_state", choices = unique(grouped$STATENAME), selected = input$state_input)
   # }) #Location Pre-set
