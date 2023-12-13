@@ -53,6 +53,10 @@ ui <- dashboardPage(
   dashboardSidebar(
     #Set tabs for sidebar
     sidebarMenu(
+      id = "sidebar",
+      menuItem("Dataset", tabName = "data", icon = icon("database")),
+      menuItem(text = "Visualizations", tabName = "vis", icon = icon("chart-line")),
+      menuItem(text = "Chloropleth Map", tabName = "map", icon = icon("map")),
       menuItem("Homepage", tabName = "tab1"),
       menuItem("Location", tabName = "tab2"),
       menuItem("Season", tabName = "tab3")#,
@@ -67,6 +71,16 @@ ui <- dashboardPage(
             style = "margin-right: 30px;",
     ),
     tabItems(
+      #First tab item
+      tabItem(tabName = "data",
+              #tab box
+              tabBox(id="t1", width = 12,
+                     tabPanel("About", icon = icon("address-card"), h4("tabpanel 1 placeholder")),
+                     tabPanel("Data", icon = icon("address-card"), h4("tabpanel 2 placeholder")),
+                     tabPanel("Structure", icon = icon("address-card"), h4("tabpanel 3 placeholder")),
+                     tabPanel("Summary Stats", icon = icon("address-card"), h4("tabpanel 4 placeholder"))
+                     ), #tabBox
+              ), #tabitem
       #Tab 1 - Home
       tabItem(tabName = "tab1",
               h3("United States Traffic Accidents Data Dashboard (2021)"),
