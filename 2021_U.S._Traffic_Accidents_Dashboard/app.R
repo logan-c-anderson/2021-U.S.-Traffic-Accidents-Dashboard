@@ -136,8 +136,8 @@ ui <- dashboardPage(
       tabItem(tabName = "vis",
               tabBox(id = "t2", width = 12, 
                      tabPanel(title = "Some Trends Per State", value = "trends", 
-                              fluidRow(tags$div(align="center"), box(collapsible = TRUE, status = "primary", collapsed = TRUE, solidHeader = TRUE),
-                                       tags$div(align="center"), box(collapsible = TRUE, status = "primary", collapsed = TRUE, solidHeader = TRUE)),
+                              fluidRow(tags$div(align="center"), box(tableOutput("top5"), title = textOutput("head1"), collapsible = TRUE, status = "primary", collapsed = TRUE, solidHeader = TRUE),
+                                       tags$div(align="center"), box(tableOutput("low5"), title = textOutput("head2"), collapsible = TRUE, status = "primary", collapsed = TRUE, solidHeader = TRUE)),
                               plotlyOutput("bar")),
                      tabPanel(title = "Distribution", value = "distro", plotlyOutput("histplot")),
                      tabPanel(title = "Correlation Matrix", plotlyOutput("cor")),
@@ -291,6 +291,31 @@ p <- allData %>%
              yaxis = list(title = paste(input$var2), "some more words..."))
   })
   
+  #Rendering the boxheader
+  output$head1 <- renderText(
+    paste("5 States With high rate of", input$var2)
+  )
+  #Rendering the boxheader
+  output$head2 <- renderText(
+    paste("5 States With low rate of", input$var2)
+  )
+  #Rendering table with 5 states with high rates for specific traffic accident attribute
+  output$top5 <- renderTable({
+    #Top 5 states with high fatality rates
+    allData %>% 
+      select(STATENAME, input$var2) %>% 
+      arrange(desc(get(input$var2))) %>% 
+      head(5)
+  })
+  
+  #Rendering table with 5 states with low rates for specific traffic accident attribute
+  output$low5 <- renderTable({
+    #Top 5 states with low fatality rates
+    allData %>% 
+      select((STATENAME), input$var2) %>% 
+      arrange((get(input$var2))) %>% 
+      head(5)
+  })
   # observe({
   #   updateSelectInput(session, "select_state", choices = unique(grouped$STATENAME), selected = input$state_input)
   # }) #Location Pre-set
