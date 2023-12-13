@@ -35,6 +35,7 @@ library(RColorBrewer)
 library(shinyjs)
 library(DT)
 library(ggtext)
+library(ggcorrplot)
 
 #load data
 allData <- read.csv("combined_accident_data.csv")
@@ -84,6 +85,7 @@ ui <- dashboardPage(
       menuItem("Dataset", tabName = "data", icon = icon("database")),
       menuItem(text = "Visualizations", tabName = "vis", icon = icon("chart-line")),
       conditionalPanel("input.sidebar == 'vis' && input.t2 == 'distro'", selectInput(inputId = "var1", label = "Select the variable", choices = c1, selected = "VNUM_LANNAME")),
+      conditionalPanel("input.sidebar == 'vis' && input.t2 == 'trends'", selectizeInput("var2", label = "Select variable type", choices = c1)),
       conditionalPanel("input.sidebar == 'vis' && input.t2 == 'relation'", selectInput(inputId = "var3", label = "Select the X variable", choices = c1, selected = "FATALS")),
       conditionalPanel("input.sidebar == 'vis' && input.t2 == 'relation'", selectInput(inputId = "var4", label = "Select the Y variable", choices = c1, selected = "VSPD_LIM")),
       menuItem(text = "Chloropleth Map", tabName = "map", icon = icon("map")),
@@ -123,9 +125,9 @@ ui <- dashboardPage(
       #Second tab item
       tabItem(tabName = "vis",
               tabBox(id = "t2", width = 12, 
-                     tabPanel(title = "Some Trends Per State", value = "trends", h4("tabPanel 1 placeholder ")),
+                     tabPanel(title = "Some Trends Per State", value = "trends", plotlyOutput("bar")),
                      tabPanel(title = "Distribution", value = "distro", plotlyOutput("histplot")),
-                     tabPanel(title = "Correlation Matrix", h4("tabPanel 1 placeholder ")),
+                     tabPanel(title = "Correlation Matrix", plotlyOutput("cor")),
                      tabPanel(title = "Relationship among var 1 & var 2", value = "relation", 
                               radioButtons(inputId = "fit", label = "Select smooth method", choices = c("loess", "lm"), selected = "lm", inline = TRUE),
                               plotlyOutput("scatter"))
@@ -238,7 +240,7 @@ server <- function(input, output, session) {
   
 #Creating scatter plot for relationships using ggplot
   output$scatter <- renderPlotly({
-p = allData %>% 
+p <- allData %>% 
     ggplot(aes(x=get(input$var3), y=get(input$var4))) + 
     geom_point() +
     geom_smooth(method=get(input$fit)) +
@@ -249,6 +251,33 @@ p = allData %>%
                                               halign = 0.5))
   ggplotly(p)
   })
+  
+  output$cor <- renderPlotly({
+    #Compute a matrix of p-values
+    p.mat <- cor_pmat(my_df)
+    
+    corr.plot <- ggcorrplot(
+      corr, 
+      hc.order = TRUE,
+      lab = TRUE,
+      outline.color = "white",
+      p.mat = p.mat
+    )
+    
+    ggplotly(corr.plot)
+  })
+  
+  
+  #Bar charts - state wise trend
+  output$bar <- renderPlotly({
+    allData %>% 
+      plot_ly() %>% 
+      add_bars(x=~STATENAME, y=~get(input$var2)) %>% 
+      layout(title = paste("Statewise blank for", input$var2),
+             xaxis = list(title = "State"),
+             yaxis = list(title = paste(input$var2), "some more words..."))
+  })
+  
   # observe({
   #   updateSelectInput(session, "select_state", choices = unique(grouped$STATENAME), selected = input$state_input)
   # }) #Location Pre-set
