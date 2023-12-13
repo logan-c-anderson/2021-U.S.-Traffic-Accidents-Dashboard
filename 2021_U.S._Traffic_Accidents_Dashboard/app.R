@@ -33,12 +33,39 @@ library(DT)
 library(plotly)
 library(RColorBrewer)
 library(shinyjs)
+library(DT)
+library(ggtext)
 
 #load data
 allData <- read.csv("combined_accident_data.csv")
 
+#structure of the data
+allData %>% str()
+#summary of the data
+allData %>% summary()
+#first 5 rows
+allData %>% head()
+
+#Second menuItem visualization
+#create histogram and boxplot for distribution panel
+p1 <-  allData %>%
+  plot_ly() %>%
+  add_histogram(~VNUM_LANNAME) %>%
+  layout(xaxis = list(title = "VNUM_LANNAME"))
+#Box plot
+p2 <-  allData %>%
+  plot_ly() %>%
+  add_boxplot(~VNUM_LANNAME) %>%
+  layout(yaxis = list(showticklabels = F))
+#Stacking plots
+subplot(p2, p1, nrows = 2, shareX = TRUE) %>% 
+hide_legend() %>% 
+  layout(title = "Distribution Chart - Histogram and Boxplot",
+         yaxis = list(title = "Frequency"))
+
+
 #Add Icon/Logo along with the title in the header
-title <- tags$a(href='https://www.nhtsa.gov/',
+title <- tags$a(href='https://www.google.com',
                 icon("car", height = '50', width = '50'),'U.S. Accidents Dashboard (2021)')
 
 
@@ -46,7 +73,7 @@ title <- tags$a(href='https://www.nhtsa.gov/',
 # Define UI for the dashboard application
 ui <- dashboardPage(
   dashboardHeader(title = title, titleWidth = 400, #define dashboard header
-                  tags$li(class="dropdown", tags$a(href="https://www.strava.com/athletes/42866350", icon("strava"), "My Account", target="_blank")), #Youtube
+                  tags$li(class="dropdown", tags$a(href="https://www.strava.com/athletes/42866350", icon("strava"), "Strava", target="_blank")), #Strava
                   tags$li(class="dropdown", tags$a(href="https://www.linkedin.com/in/logan-anderson-18191923a/", icon("linkedin"), "My Profile", target="_blank")), #LinkedIn
                   tags$li(class="dropdown", tags$a(href="https://github.com/logan-c-anderson/2021-U.S.-Traffic-Accidents-Dashboard", icon("github"), "Source Code", target="_blank")) #GitHub
   ),
@@ -56,6 +83,7 @@ ui <- dashboardPage(
       id = "sidebar",
       menuItem("Dataset", tabName = "data", icon = icon("database")),
       menuItem(text = "Visualizations", tabName = "vis", icon = icon("chart-line")),
+      selectInput(inputId = "var1", label = "Select the variable", choices = c1, selected = "VNUM_LANNAME"),
       menuItem(text = "Chloropleth Map", tabName = "map", icon = icon("map")),
       menuItem("Homepage", tabName = "tab1"),
       menuItem("Location", tabName = "tab2"),
@@ -67,7 +95,7 @@ ui <- dashboardPage(
   #body of tabs
   dashboardBody(
     includeCSS("custom1.css"),
-    tags$li(class = "nav-item", tags$a(class = "nav-link", href = "", "Download 2021 U.S.Accident Data"),
+    tags$li(class = "nav-item", tags$a(class = "nav-link", href = "https://www.nhtsa.gov/", "NHTSA Website"),
             style = "margin-right: 30px;",
     ),
     tabItems(
@@ -75,12 +103,34 @@ ui <- dashboardPage(
       tabItem(tabName = "data",
               #tab box
               tabBox(id="t1", width = 12,
-                     tabPanel("About", icon = icon("address-card"), h4("tabpanel 1 placeholder")),
-                     tabPanel("Data", icon = icon("address-card"), h4("tabpanel 2 placeholder")),
-                     tabPanel("Structure", icon = icon("address-card"), h4("tabpanel 3 placeholder")),
-                     tabPanel("Summary Stats", icon = icon("address-card"), h4("tabpanel 4 placeholder"))
+                     tabPanel("About", icon = icon("address-card"), fluidRow(
+                       column(width = 8, tags$img(src="https://previews.123rf.com/images/denayunebgt/denayunebgt2204/denayunebgt220400108/184544454-car-accident-background-illustration-with-two-cars-colliding-or-hitting-something-on-the-road.jpg", 
+                                                  width = 450, height = 300),
+                              tags$br(),
+                              tags$a("Photo by: Rini Astiyah on 123rf.com"), align = "center"),
+                       column(width = 4, tags$br(),
+                              tags$p("This data set was provided by Dr. Ge in STAT 442 at SDSU.")
+                              )
+                     ) #fluidRow
+                     ), #tabPanel
+                     tabPanel("Data", icon = icon("address-card"), dataTableOutput("dataTable")),
+                     tabPanel("Structure", icon = icon("address-card"), verbatimTextOutput("structure")),
+                     tabPanel("Summary Stats", icon = icon("address-card"), verbatimTextOutput("summary"))
                      ), #tabBox
               ), #tabitem
+      #Second tab item
+      tabItem(tabName = "vis",
+              tabBox(id = "t2", width = 12, 
+                     tabPanel(title = "Some Trends Per State", value = "trends", h4("tabPanel 1 placeholder ")),
+                     tabPanel(title = "Distribution", value = "distro", plotlyOutput("histplot")),
+                     tabPanel(title = "Correlation Matrix", h4("tabPanel 1 placeholder ")),
+                     tabPanel(title = "Relationship among var 1 & var 2", value = "relation", h4("tabPanel 1 placeholder "))
+                     )
+              ),
+      #Third tabItem
+      tabItem(tabName = "map",
+              box(h1("placeholder"))
+              ),
       #Tab 1 - Home
       tabItem(tabName = "tab1",
               h3("United States Traffic Accidents Data Dashboard (2021)"),
@@ -149,6 +199,50 @@ ui <- dashboardPage(
 
 
 server <- function(input, output, session) {
+  
+  #Structure of the data
+  output$structure <- renderPrint(allData %>% str())
+  
+  #Summary of the data
+  output$summary <- renderPrint(allData %>% summary())
+  
+  #DataTable
+  output$dataTable <- renderDataTable(allData)
+  
+  #Stacked histogram and boxplot
+  output$histplot <- renderPlotly({
+    p1 <-  allData %>%
+      plot_ly() %>%
+      add_histogram(~get(input$var1)) %>%
+      layout(xaxis = list(title = input$var1))
+    #Box plot
+    p2 <-  allData %>%
+      plot_ly() %>%
+      add_boxplot(~get(input$var1)) %>%
+      layout(yaxis = list(showticklabels = F))
+    #Stacking plots
+    subplot(p2, p1, nrows = 2, shareX = TRUE) %>% 
+    hide_legend() %>% 
+      layout(title = "Distribution Chart - Histogram and Boxplot",
+             yaxis = list(title = "Frequency"))
+  })
+  
+  #Choices for selectInput - without states columns
+  c1 <- allData %>% 
+    select(-ST_CASE) %>% 
+    names()
+  
+#Creating scatter plot for relationships using ggplot
+  allData %>% 
+    ggplot(aes(x=FATALS, y=VSPD_LIM)) + 
+    geom_point() +
+    geom_smooth(method = "lm") +
+    labs(title = "Relationship Between Speed Limit and Fatalities",
+         x = "Fatalities",
+         y = "Speed Limit") + 
+    theme(plot.title = element_textbox_simple(size = 10,
+                                              halign = 0.5))
+  
   
   # observe({
   #   updateSelectInput(session, "select_state", choices = unique(grouped$STATENAME), selected = input$state_input)
