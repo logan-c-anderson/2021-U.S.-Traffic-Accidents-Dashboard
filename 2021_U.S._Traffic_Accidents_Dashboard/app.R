@@ -1,8 +1,12 @@
 # ---
-# title: "2021 U.S. Traffic Accidents App"
+# title: "2021 U.S. Traffic Accidents Dashboard"
 # author: "Logan Anderson"
 # format: Shiny App
 # ---
+
+# Deployed at :
+# Source code at GitHub: https://github.com/logan-c-anderson/2021-U.S.-Traffic-Accidents-Dashboard.git
+
 
 # load libraries
 library(shiny)
@@ -13,194 +17,209 @@ library(dplyr)
 library(maps)
 library(leaflet)
 
-# data
+library(shinydashboard)
+library(shiny)
+library(gt)
+library(dplyr)
+library(readxl)
+library(GGally)
+library(ggridges)
+library(ggplot2)
+library(ggthemes)
+library(tidyr)
+library(forcats)
+library(MASS)
+library(DT)
+library(plotly)
+library(RColorBrewer)
+library(shinyjs)
+
+#load data
 allData <- read.csv("combined_accident_data.csv")
 
-grouped <- allData %>%
-  group_by(STATENAME, WEATHERNAME) %>%
-  summarise(TotalAccidents = n(), .groups = "drop") %>%
-  mutate(Accidents_Per_1k = TotalAccidents / 1000)
+#Add Icon/Logo along with the title in the header
+title <- tags$a(href='https://www.nhtsa.gov/',
+                icon("car", height = '50', width = '50'),'U.S. Accidents Dashboard (2021)')
 
-grouped2 <- allData %>%
-  group_by(MAKENAME, WEATHERNAME) %>%
-  summarise(TotalAccidents = n(), .groups = "drop") %>%
-  mutate(Accidents_Per_1k = TotalAccidents / 1000)
 
 # Define UI for application for Shiny App
-ui <- fluidPage(
-  theme = shinytheme("superhero"), # Theme
-  navbarPage(
-    "United States Accidents (2021)",
-    
-    # App title
-    tabPanel(
-      "Location",
-      sidebarPanel(
-        titlePanel("Select State:"),
-        tags$h1(""),
-        selectInput("state_input",
-                    "Select State:",
-                    choices = unique(grouped$STATENAME)
-        ) # selectInput
-      ),
-      mainPanel(
-        h1("Accident Data By Location"),
-        h3("Count of Accidents In Each Type of Weather Condition"),
-        plotOutput("bar_plot")
-      ),
-      sidebarPanel(
-        selectInput("select_state", h3("Select State"),
-                    choices = unique(grouped$STATENAME),
-                    selected = "Alabama"
-        ),
-      ),
-      mainPanel(
-        # Map
-        titlePanel("Map of Accidents In The U.S."), # title for map
-        leafletOutput("AccidentsMap")
-      )
-    ), # Location, tabpanel
-    
-    tabPanel(
-      "Season",
-      sidebarPanel(
-        titlePanel("Accidents per Season"),
-        tags$h3("Choose Season"),
-        radioButtons("radio",
-                     label = h3("Radio buttons"),
-                     choices = list(
-                       "Spring" = "April showers bring May flowers :)",
-                       "Summer" = "Good times and tan lines :)",
-                       "Fall" = "Happy Fall, Y'all! :)",
-                       "Winter" = "Brrrr... Man, why do I live in South Dakota >:("
-                     ),
-                     selected = "April showers bring May flowers :)"
-        ),
-        hr(),
-        fluidRow(column(3, verbatimTextOutput("value")))
-      ),
-      mainPanel(
-        h2("I don't want to add another bar plot..."),
-        img(src = "https://i.redd.it/zdcwrd8teb041.png", width = "431px"),
-        p("Enjoy this meme instead. :)")
-      ),
-    ), # Season, tabpanel
-    
-    tabPanel(
-      "Vehicle",
-      sidebarPanel(
-        titlePanel("Accidents Per Make of Car"),
-        tags$h3("Select Make of Car:"),
-        radioButtons("Makes",
-                     "",
-                     choices = unique(grouped2$MAKENAME)
-        ) # radioButtons
-      ), # sideBarPanel
-      mainPanel(
-        h1("Accident Data By Make of Car"),
-        h3("Count of Accidents For Each Make"),
-        plotOutput("vehicle_plot")
-      ), # mainPanel
-    ) # Vehicle, tabpanel
-  ) # NavbarPage
-) # fluid Page
+# Define UI for the dashboard application
+ui <- dashboardPage(
+  dashboardHeader(title = title, titleWidth = 400, #define dashboard header
+                  tags$li(class="dropdown", tags$a(href="https://www.strava.com/athletes/42866350", icon("strava"), "My Account", target="_blank")), #Youtube
+                  tags$li(class="dropdown", tags$a(href="https://www.linkedin.com/in/logan-anderson-18191923a/", icon("linkedin"), "My Profile", target="_blank")), #LinkedIn
+                  tags$li(class="dropdown", tags$a(href="https://github.com/logan-c-anderson/2021-U.S.-Traffic-Accidents-Dashboard", icon("github"), "Source Code", target="_blank")) #GitHub
+  ),
+  dashboardSidebar(
+    #Set tabs for sidebar
+    sidebarMenu(
+      menuItem("Homepage", tabName = "tab1"),
+      menuItem("Location", tabName = "tab2"),
+      menuItem("Season", tabName = "tab3")#,
+      # menuItem("EPS Per Market Cap", tabName = "tab4")
+    ) #sideBarMenu
+  ),  #define dashboard side bar
+  
+  #body of tabs
+  dashboardBody(
+    includeCSS("custom1.css"),
+    tags$li(class = "nav-item", tags$a(class = "nav-link", href = "", "Download 2021 U.S.Accident Data"),
+            style = "margin-right: 30px;",
+    ),
+    tabItems(
+      #Tab 1 - Home
+      tabItem(tabName = "tab1",
+              h3("United States Traffic Accidents Data Dashboard (2021)"),
+              p("🎉 Welcome to the United States Traffic Accidents Data Dashboard app! 🎉"),
+              p("This is a dashboard designed for the purpose of analyzing and communicating traffic accidents in the U.S. with the goal of
+              improving traffic in the future and saving lives on the road!"),
+              p("To use this app, use the sidebar to select topic to analyze, manipulate the widgets within each tab to change the
+                analysis according to your preferences! To download a high
+                quality image of the plot you've created, you can also download it 
+                with the download button. To see the raw data, use the raw data tab 
+                for an interactive form of the table. The data dictionary is as follows: "),
+              p(""),
+              p(""),
+              h3("U.S. Traffic Accidents Dashboard Data Dictionary"),
+              p("These variables will be used throughout the analysis. Feel free to reference back to this page as often as possible."),
+              tabsetPanel(
+                tabPanel(
+                  fluidPage(gt_output("table_plot"))
+                ) #tabsPanel
+              ) #tabsetPanel
+              ), #Tab - Homepage
+      #Tab 1 -Homepage
+      
+      #Tab 2 - Location
+      tabItem(
+        tabName = "tab2",
+        h3("U.S. Traffic Accidents Location Data"),
+        p("Locations"),
+        fluidPage(
+          titlePanel("Interactive United States Map"),
+            sidebarLayout(
+              sidebarPanel(
+                selectInput("state_select", h3("Select State:"),
+                            choices = unique(allData$STATENAME),
+                            multiple = TRUE),                     #For User To Select State
+                selectInput("month_select", h3("Select Month"),
+                            choices = unique(allData$MONTHNAME),
+                            multiple = TRUE),
+                sliderInput("fatality_slider", h3("Select Minimum Fatalities:"),
+                            min = 1, max = max(allData$FATALS), value = 1, step = 1)
+                ), #SidebarPanel
+              mainPanel(p("Hello World"))
+              ) #sideBarLayout
+          ) #fluidPage
+        ), #tabItem
+      #Tab 2 - Location
+      
+      #Tab 3 - Distributions
+      tabItem(
+        tabName = "tab3",
+        h3("Distributions"),
+        tabsetPanel(
+          tabPanel(
+            titlePanel("Configure Ridgeline"),
+            tags$h1(""),
+          ) #tabPanel
+        ), #tabSetPanel
+      ) #tabItem
+    ), #tabItems
+  ) #dashboardBody
+) #dashboardPage
 
 
 
 
-# Define server logic required for Shiny App
+
+
 server <- function(input, output, session) {
-  observe({
-    updateSelectInput(session, "select_state", choices = unique(grouped$STATENAME), selected = input$state_input)
-  })
   
-  
-  # Location Bar plot
-  output$bar_plot <- renderPlot({
-    filtered_data <- reactive({
-      filter_data <- grouped
-      if (input$state_input != "All") {
-        filter_data <- filter_data %>% filter(STATENAME == input$state_input)
-      }
-      return(filter_data)
-    })
-    
-    ggplot(filtered_data(), aes(x = WEATHERNAME, y = TotalAccidents)) +
-      geom_bar(stat = "identity", fill = "cyan4") +
-      labs(
-        title = input$state_input,
-        x = "Weather Conditions",
-        y = "Total Accidents"
-      ) +
-      theme_minimal() +
-      theme(
-        axis.text.x = element_text(angle = 45, hjust = 1),
-        plot.title = element_text(size = 30), # title size
-        axis.title.x = element_text(size = 18), # X-axis label size
-        axis.title.y = element_text(size = 18), # Y-axis label size
-        axis.text = element_text(size = 18) # X-axis/y-axis tick label size
+  # observe({
+  #   updateSelectInput(session, "select_state", choices = unique(grouped$STATENAME), selected = input$state_input)
+  # }) #Location Pre-set
+  # 
+  #Tab 1 - Homepage
+  #data dictionary
+  output$table_plot <- render_gt({
+    data.frame(
+      Variables = c(
+        "Fatality",
+        "State Name",
+        "County Name",
+        "Month"
+      ),
+      Description = c(
+        "Whether the accident was fatal or not...",
+        "The name of the state in which the accident occured...",
+        "The name of the county in which the accident occured...",
+        "The name month in which the accident occured..."
       )
-  }) # renderPlot for Bar Plot
-  # Location Bar Plot
+    ) %>%
+      gt() %>%
+      tab_header(title = md("Dashborad Variables"),
+                 subtitle = md("S&P 500"))
+  }) #data dictionary
+  #Tab 1 - Homepage
   
-  # Map
-  output$AccidentsMap <- renderLeaflet({
-    leaflet(allData %>%
-              dplyr::filter(
-                STATENAME == input$select_state
-              )) %>%
+
+  # Tab 2 - Location
+  #map
+  output$map <- renderLeaflet({
+    #Filter data - State
+    filtered_data <- if (any(input$state_select == "All")) {allData} 
+    else {
+      allData %>%
+        filter(STATENAME %in% input$state_select)
+    }
+    
+    # Filter data - Month
+    if (any(input$month_select == "All")) {
+      filtered_data <- allData
+    } else {
+      filtered_data <- allData %>%
+        filter(MONTHNAME %in% input$month_select)
+    }
+    
+    leaflet() %>%
       addTiles() %>%
-      addMarkers(lat = ~LATITUDE, lng = ~LONGITUD)
-  }) # renderLeaflet
-  # Map
-  
-  # Seasons Radio Buttons
-  output$value <- renderPrint({
-    input$radio
-    radio <- switch(input$radio,
-                    "Spring" = "April showers bring May flowers :)",
-                    "Summer" = "Good times and tan lines :)",
-                    "Fall" = "Happy Fall, Y'all! :)",
-                    "Winter" = "Brrrr... Man, why do I live in South Dakota >:(",
-                    "Spring"
-    ) # switch
-  })
-  # Seasons Radio Buttons
-  
-  # Vehicles Radio Buttons
-  output$vehicle_plot <- renderPlot({
-    selected_make <- input$Makes
-    
-    filtered_data <- reactive({
-      filter_data <- grouped2
-      if (!is.null(selected_make)) {
-        filter_data <- filter_data %>% filter(MAKENAME == selected_make)
-      }
-      return(filter_data)
+      addMarkers(data = allData,
+                 lat = ~LATITUDE,
+                 lng = ~LONGITUD,
+                 popup = ~paste("Fatalities: ", FATALS, "<br>Month: ", MONTHNAME, "<br>Day: ", DAYNAME))
     })
     
-    ggplot(filtered_data(), aes(x = WEATHERNAME, y = TotalAccidents)) +
-      geom_bar(stat = "identity", fill = "hotpink3") +
-      labs(
-        title = paste("Selected Make:", selected_make),
-        x = "Weather Conditions",
-        y = "Total Accidents"
-      ) +
-      theme_minimal() +
-      theme(
-        axis.text.x = element_text(angle = 45, hjust = 1),
-        plot.title = element_text(size = 20), # Title size
-        axis.title.x = element_text(size = 18), # X-axis label size
-        axis.title.y = element_text(size = 18), # Y-axis label size
-        axis.text = element_text(size = 18) # X-axis/y-axis tick label size
+  observe({
+    leafletProxy("map") %>%
+      removeShape("rectangle") %>%
+      addRectangles(
+        lng1 = -125,  # Minimum longitude for the continental U.S.
+        lat1 = 24,    # Minimum latitude for the continental U.S.
+        lng2 = -65,   # Maximum longitude for the continental U.S.
+        lat2 = 49,    # Maximum latitude for the continental U.S.
+        color = "red",   # Border color
+        weight = 2,      # Border width
+        fill = FALSE     # No fill
       )
   })
   
-  # Vehicles Radio Buttons
-} # Function
+
+    # Tab 2 - Location
+  
+  
+  #Tab 3 - Season
+  #code code
+  #code
+  # code
+  #Tab 3 - Season
+  
+  
+}
 
 
 
 
 # Run the application
 shinyApp(ui = ui, server = server)
+
