@@ -56,7 +56,7 @@ new_variable_names <- c(
   "VerticalAlignment", "VerticalProfile", "PavementType", "SurfaceCondition",
   "TrafficControlDeviceCondition", "TrafficControlFunction", "FirstPreCrashEvent",
   "SecondPreCrashEvent", "ThirdPreCrashEvent", "FourthPreCrashEvent",
-  "FifthPreCrashEvent", "AccidentType", "NumberOfDeaths", "DriverDrinking",
+  "FifthPreCrashEvent", "AccidentType", "Deaths", "DriverDrinking",
   "FirstHarmfulEventVehicleMake", "FirstHarmfulEventVehicleModel",
   "FirstHarmfulEventBodyClass", "GVWRFrom", "GVWRTo", "County", "City",
   "Latitude", "Longitude", "WeatherConditions", "Fatalities"
@@ -110,6 +110,17 @@ allData2 %>%
 title <- tags$a(href='https://www.google.com',
                 icon("car", height = '50', width = '50'),'U.S. Accidents Dashboard (2021)')
 
+# Select the variables for correlation analysis
+selected_variables <- c(
+  "Hour", "Month", "Occupants", "SpeedLimit", 
+  "Deaths", "Fatalities"
+)
+
+# Create a new dataframe with selected variables
+correlation_data <- allData2[, selected_variables]
+correlation_data_numeric <- as.data.frame(sapply(correlation_data, function(x) as.numeric(as.character(x))))
+
+
 
 # Define UI for application for Shiny App
 # Define UI for the dashboard application
@@ -128,12 +139,7 @@ ui <- dashboardPage(
       conditionalPanel("input.sidebar == 'vis' && input.t2 == 'distro'", selectInput(inputId = "var1", label = "Select the variable", choices = c1, selected = "NumberOfLanes")),
       conditionalPanel("input.sidebar == 'vis' && input.t2 == 'trends'", selectizeInput("var2", label = "Select variable type", choices = c1)),
       conditionalPanel("input.sidebar == 'vis' && input.t2 == 'relation'", selectInput(inputId = "var3", label = "Select the X variable", choices = c1, selected = "Fatalities")),
-      conditionalPanel("input.sidebar == 'vis' && input.t2 == 'relation'", selectInput(inputId = "var4", label = "Select the Y variable", choices = c1, selected = "SpeedLimit")),
-      menuItem(text = "Chloropleth Map", tabName = "map", icon = icon("map")),
-      menuItem("Homepage", tabName = "tab1"),
-      menuItem("Location", tabName = "tab2"),
-      menuItem("Season", tabName = "tab3")#,
-      # menuItem("EPS Per Market Cap", tabName = "tab4")
+      conditionalPanel("input.sidebar == 'vis' && input.t2 == 'relation'", selectInput(inputId = "var4", label = "Select the Y variable", choices = c1, selected = "SpeedLimit"))
     ) #sideBarMenu
   ),  #define dashboard side bar
   
@@ -154,17 +160,20 @@ ui <- dashboardPage(
                               tags$br(),
                               tags$a("Photo by: Rini Astiyah on 123rf.com"), align = "center"),
                        column(width = 8, tags$br(),
-                              h3("United States Traffic Accidents Data Dashboard (2021)"),
-                              tags$p("🎉 Welcome to the United States Traffic Accidents Data Dashboard app! 🎉"),
-                              tags$p("This is a dashboard designed for the purpose of analyzing and communicating 
-                               traffic accidents in the U.S. with the goals of raising awareness of traffic 
-                               accidents in the U.S., improving traffic in the future, and saving lives on the road!"),
-                              tags$p("To use this app, use the sidebar to select topic to analyze, manipulate the 
-                               widgets within each tab to change the analysis according to your preferences! To 
-                               download a high quality image of the plot you've created, you can also download it 
-                               with the download button. To see the raw data, use the raw data tab for an 
-                               interactive form of the table."),
-                              tags$p("This data set was provided by Dr. Ge in STAT 442 at SDSU.")
+                              h3("United States Traffic Accidents Data Dashboard (2021)", align = "center"),
+                              
+                              tags$h3("🚦 Welcome to the United States Traffic Accidents Data Dashboard! 🚦", align = "center"),
+
+                              tags$p("Explore and analyze intriguing insights into traffic accidents across the United States in 2021. 
+                                     This dashboard is designed for the purpose of using data-driven insights to enhance nationwide understanding of traffic 
+                                     incidents, with a focus on raising awareness, improving traffic safety, and ultimately, 
+                                     saving lives on the road!"),
+                              
+                              tags$p("Navigate through the dataset information and visualizations using the sidebar. Customize your 
+                                     analysis by selecting specific variables in the prompts, tailoring the data exploration to 
+                                     your preferences!"), tags$h1(""),
+                              
+                              tags$h6("This dataset was provided by Dr. Ge from STAT 442 at South Dakota State University.", align = "center")
                        )
                      ) #fluidRow
                      ), #tabPanel
@@ -190,54 +199,17 @@ ui <- dashboardPage(
                      tabPanel(title = "Distribution", value = "distro", plotlyOutput("histplot")),
                      tabPanel(title = "Correlation Matrix", plotlyOutput("cor")),
                      tabPanel(title = "Relationship Among Variables", value = "relation", 
-                              radioButtons(inputId = "fit", label = "Select smooth method", choices = c("loess", "lm"), selected = "lm", inline = TRUE),
+                              radioButtons(inputId = "fit", label = "Select Smooth Method", choices = c("loess", "lm"), selected = "lm", inline = TRUE),
                               plotlyOutput("scatter"))
               )#tabBox
       ),
       #Third tabItem
       tabItem(tabName = "map",
               box(h1("placeholder"))
-      ),
-      
-      #Tab 2 - Location
-      tabItem(
-        tabName = "tab2",
-        h3("U.S. Traffic Accidents Location Data"),
-        p("Locations"),
-        fluidPage(
-          titlePanel("Interactive United States Map"),
-          sidebarLayout(
-            sidebarPanel(
-              selectInput("state_select", h3("Select State:"),
-                          choices = unique(allData2$State),
-                          multiple = TRUE),                     #For User To Select State
-              selectInput("month_select", h3("Select Month"),
-                          choices = unique(allData2$MonthName),
-                          multiple = TRUE),
-              sliderInput("fatality_slider", h3("Select Minimum Fatalities:"),
-                          min = 1, max = max(allData2$Fatalities), value = 1, step = 1)
-            ), #SidebarPanel
-            mainPanel(p("Hello World"))
-          ) #sideBarLayout
-        ) #fluidPage
-      ), #tabItem
-      #Tab 2 - Location
-      
-      #Tab 3 - Distributions
-      tabItem(
-        tabName = "tab3",
-        h3("Distributions"),
-        tabsetPanel(
-          tabPanel(
-            titlePanel("Configure Ridgeline"),
-            tags$h1(""),
-          ) #tabPanel
-        ), #tabSetPanel
-      ) #tabItem
+      )
     ), #tabItems
   ) #dashboardBody
 ) #dashboardPage
-
 
 
 
@@ -293,10 +265,10 @@ server <- function(input, output, session) {
   
   output$cor <- renderPlotly({
     #Compute a matrix of p-values
-    p.mat <- cor_pmat(my_df)
+    p.mat <- cor_pmat(correlation_data_numeric)
     
     corr.plot <- ggcorrplot(
-      corr, 
+      cor, 
       hc.order = TRUE,
       lab = TRUE,
       outline.color = "white",
@@ -312,9 +284,9 @@ server <- function(input, output, session) {
     allData2 %>% 
       plot_ly() %>% 
       add_bars(x=~State, y=~get(input$var2)) %>% 
-      layout(title = paste("Statewise blank for", input$var2),
+      layout(title = paste("Statewise View of", input$var2),
              xaxis = list(title = "State"),
-             yaxis = list(title = paste(input$var2), "some more words..."))
+             yaxis = list(title = paste(input$var2), "Placeholder"))
   })
   
   #Rendering the boxheader
@@ -351,40 +323,100 @@ server <- function(input, output, session) {
   output$table_plot <- render_gt({
     data.frame(
       Variables = c(
-        "GICS Sector",
-        "GICS Sub Industry",
-        "Founded",
-        "Symbol",
-        "Security",
-        "52w high",
-        "52w low",
-        "%YTD",
-        "Market Cap",
-        "Beta",
-        "EPS",
-        "PE"
+        "State", "CaseNumber", "VehicleNumber", "Occupants", "DayOfWeek", "Month",
+        "MonthName", "Hour", "MinuteName", "HarmfulEvent", "CollisionManner",
+        "UnitType", "HitAndRun", "RegistrationState", "VehicleOwner", "VehicleMake",
+        "VehicleMakeModel", "BodyType", "ModelYear", "Jackknife", "VehicleConfiguration",
+        "CargoBodyType", "BusUse", "TravelSpeedCategory", "Rollover", "FirstImpactArea",
+        "VehicleDeformed", "MainHarmfulEvent", "DriverLicenseStatus", "DriverHeight",
+        "DriverWeight", "PreviousAccident", "PreviousDWI", "PreviousSpeeding",
+        "PreviousOther", "FirstRegistrationMonth", "FirstRegistrationYear",
+        "LastRegistrationMonth", "LastRegistrationYear", "SpeedingRelatedFactor",
+        "TrafficwayType", "NumberOfLanes", "SpeedLimit", "SpeedLimitName",
+        "VerticalAlignment", "VerticalProfile", "PavementType", "SurfaceCondition",
+        "TrafficControlDeviceCondition", "TrafficControlFunction", "FirstPreCrashEvent",
+        "SecondPreCrashEvent", "ThirdPreCrashEvent", "FourthPreCrashEvent",
+        "FifthPreCrashEvent", "AccidentType", "Deaths", "DriverDrinking",
+        "FirstHarmfulEventVehicleMake", "FirstHarmfulEventVehicleModel",
+        "FirstHarmfulEventBodyClass", "GVWRFrom", "GVWRTo", "County", "City",
+        "Latitude", "Longitude", "WeatherConditions", "Fatalities"
       ),
       Description = c(
-        "Global Industry Classification Standard (GICS) sector to which the company belongs. 
-        GICS is a system for categorizing stocks into sectors and industries.",
-        "Further classification of the company's industry within the GICS sector.",
-        "The year the company was founded.",
-        "Stock symbol that uniquely identifies the company's stock on the stock exchange.",
-        "The name or description of the financial security (stock) being traded.",
-        "The highest stock price the company reached in the last 52 weeks.",
-        "The percentage difference between the current stock price and the 52-week low.",
-        "Percent change in price from the start of the year.",
-        "Market capitalization of the company in billions.",
-        "Measure of volatility. It indicates the stock's sensitivity to market movements.",
-        "Earnings Per Share.",
-        "Price to Earnings Ratio."
+        "State where the accident occurred.",
+        "A unique identifier for the accident case.",
+        "A unique identifier for the vehicle involved in the accident.",
+        "Number of occupants in the vehicle.",
+        "Day of the week when the accident occurred.",
+        "Month when the accident occurred.",
+        "Name of the month when the accident occurred.",
+        "Hour when the accident occurred.",
+        "Name of the minute when the accident occurred.",
+        "Type of harmful event.",
+        "Manner of collision.",
+        "Type of unit involved in the accident.",
+        "Whether the accident involved a hit and run.",
+        "State of registration for the vehicle.",
+        "Owner of the vehicle.",
+        "Make of the vehicle.",
+        "Make and model of the vehicle.",
+        "Body type of the vehicle.",
+        "Model year of the vehicle.",
+        "Whether a jackknife occurred in the accident.",
+        "Configuration of the vehicle.",
+        "Type of cargo body.",
+        "Indicates if the vehicle is used as a bus.",
+        "Speed category of travel.",
+        "Whether a rollover occurred.",
+        "Location of the first harmful event impact.",
+        "Extent of vehicle deformation.",
+        "Main harmful event leading to the accident.",
+        "Driver's license status.",
+        "Driver's height.",
+        "Driver's weight.",
+        "Whether the driver had a previous accident.",
+        "Whether the driver had a previous DWI.",
+        "Whether the driver had a previous speeding violation.",
+        "Whether the driver had a previous violation other than speeding.",
+        "Month of first vehicle registration.",
+        "Year of first vehicle registration.",
+        "Month of last vehicle registration.",
+        "Year of last vehicle registration.",
+        "Factor related to speeding.",
+        "Type of trafficway.",
+        "Number of lanes.",
+        "Speed limit.",
+        "Name of the speed limit.",
+        "Vertical alignment of the roadway.",
+        "Vertical profile of the roadway.",
+        "Type of pavement.",
+        "Surface condition of the roadway.",
+        "Condition of the traffic control device.",
+        "Function of the traffic control device.",
+        "First pre-crash event.",
+        "Second pre-crash event.",
+        "Third pre-crash event.",
+        "Fourth pre-crash event.",
+        "Fifth pre-crash event.",
+        "Type of accident.",
+        "Number of deaths.",
+        "Whether the driver was drinking.",
+        "Make of the vehicle involved in the first harmful event.",
+        "Model of the vehicle involved in the first harmful event.",
+        "Body class of the vehicle involved in the first harmful event.",
+        "Gross vehicle weight rating from.",
+        "Gross vehicle weight rating to.",
+        "County where the accident occurred.",
+        "City where the accident occurred.",
+        "Latitude of the accident location.",
+        "Longitude of the accident location.",
+        "Weather conditions at the time of the accident.",
+        "Number of fatalities in the accident."
       )
     ) %>%
       gt() %>%
-      tab_header(title = md("Dashborad Variables"),
-                 subtitle = md("S&P 500"))
+      tab_header(title = md("U.S. Traffic Accidents Data Dictionary"),
+                 subtitle = md("2021"))
   }) #data dictionary
-  #Tab 1 - Homepage
   
   }
 
