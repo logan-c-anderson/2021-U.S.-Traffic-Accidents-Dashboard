@@ -4,43 +4,34 @@
 # format: Shiny App
 # ---
 
-# Deployed at :
+# Deployed at : https://lcanderson.shinyapps.io/United-States-Traffic-Accidents-2021-Dashboard/
 # Source code at GitHub: https://github.com/logan-c-anderson/2021-U.S.-Traffic-Accidents-Dashboard.git
 
 
 # load libraries
 library(shiny)
 library(shinythemes)
-library(tidyverse)
-library(dplyr)
-# For the world maps
-library(maps)
-library(leaflet)
-
 library(shinydashboard)
-library(shiny)
-library(gt)
 library(dplyr)
-library(readxl)
-library(GGally)
-library(ggridges)
-library(ggplot2)
-library(ggthemes)
+library(tidyverse)
 library(tidyr)
 library(forcats)
 library(MASS)
-library(DT)
-library(plotly)
-library(RColorBrewer)
 library(shinyjs)
 library(DT)
+library(plotly)
+library(GGally)
+library(ggplot2)
+library(ggthemes)
 library(ggtext)
 library(ggcorrplot)
+library(gt)
 
 #load data
 allData <- read.csv("combined_accident_data.csv")
 
 
+##Cleaning Data##
 # Define the new variable names
 new_variable_names <- c(
   "State", "CaseNumber", "VehicleNumber", "Occupants", "DayOfWeek", "Month",
@@ -65,6 +56,29 @@ new_variable_names <- c(
 # Rename the variables in allData
 allData2 <- allData %>% rename(!!!setNames(names(allData), new_variable_names))
 
+#Hit and Run
+allData2$HitAndRun <- ifelse(allData2$HitAndRun == "Yes", 1, 0)
+#NumberOfLanes
+allData2$NumberOfLanes <- ifelse(allData2$NumberOfLanes == "Seven or more lanes", 7,
+                                 ifelse(allData2$NumberOfLanes == "Five lanes", 5,
+                                        ifelse(allData2$NumberOfLanes == "Four lanes", 4,
+                                               ifelse(allData2$NumberOfLanes == "Three lanes", 3,
+                                                      ifelse(allData2$NumberOfLanes == "Two lanes", 2,
+                                                             ifelse(allData2$NumberOfLanes == "One lane", 1, NA))))))
+#Rollover
+allData2$Rollover <- ifelse(allData2$Rollover %in% c("Rollover, Tripped by Object/Vehicle", "Rollover, Untripped", "Rollover, Unknown Type"), 1, 0)
+#DriverDrinking
+allData2$DriverDrinking <- ifelse(allData2$DriverDrinking == "Yes", 1, 0)
+#PreviousDWI
+allData2$PreviousDWI <- as.numeric(ifelse(allData2$PreviousDWI %in% c("None", "1", "2", "3", "4", "5", "6"), allData2$PreviousDWI, NA))
+#PreviousAccident
+allData2$PreviousAccident <- as.numeric(ifelse(allData2$PreviousAccident %in% c("None", "1", "2", "3", "4", "5", "6", "7", "8"), allData2$PreviousAccident, NA))
+#PreviousSpeeding
+allData2$PreviousSpeeding <- as.numeric(ifelse(allData2$PreviousSpeeding %in% c("None", "1", "2", "3", "4", "5", "6", "7", "8", "9"), allData2$PreviousSpeeding, NA))
+#Bus
+allData2$BusUse <- ifelse(allData2$BusUse == "Bus", 1, 0)
+##Cleaning Data##
+
 
 #structure of the data
 allData2 %>% str()
@@ -73,10 +87,27 @@ allData2 %>% summary()
 #first 5 rows
 allData2 %>% head()
 
-#Choices for selectInput - without states columns
+#Choices for selectInput - without CaseNumber columns
 c1 <- allData2 %>% 
   select(-CaseNumber) %>% 
   names()
+
+#Choices for selectInput - limited columns
+c2 <- allData2 %>% 
+  select(State, Occupants, DayOfWeek, Month, Hour, HitAndRun, BusUse, Fatalities, Deaths, 
+         SpeedLimit, Rollover, PreviousAccident, PreviousDWI, PreviousSpeeding) %>% 
+  names()
+  
+#new df
+selected_columns <- allData2 %>%
+  select(State, Occupants, DayOfWeek, Month, Hour, HitAndRun, BusUse, Fatalities, Deaths,
+         SpeedLimit, Rollover, PreviousAccident, PreviousDWI, PreviousSpeeding)
+
+# Group by State and calculate the sum for each selected column
+state_sums <- selected_columns %>%
+  group_by(State) %>%
+  summarise(across(everything(), sum, na.rm = TRUE))
+
 
 #Second menuItem visualization
 #create histogram and boxplot for distribution panel
@@ -107,14 +138,10 @@ allData2 %>%
   head(5)
 
 #Add Icon/Logo along with the title in the header
-title <- tags$a(href='https://www.google.com',
-                icon("car", height = '50', width = '50'),'U.S. Accidents Dashboard (2021)')
+title <- tags$a(href='https://lcanderson.shinyapps.io/United-States-Traffic-Accidents-2021-Dashboard/', icon("car", height = '50', width = '50'),'U.S. Accidents Dashboard (2021)')
 
 # Select the variables for correlation analysis
-selected_variables <- c(
-  "Hour", "Month", "Occupants", "SpeedLimit", 
-  "Deaths", "Fatalities"
-)
+selected_variables <- c("Hour", "Month", "Occupants", "SpeedLimit", "Deaths", "Fatalities")
 
 # Create a new dataframe with selected variables
 correlation_data <- allData2[, selected_variables]
@@ -138,8 +165,8 @@ ui <- dashboardPage(
       menuItem(text = "Visualizations", tabName = "vis", icon = icon("chart-line")),
       conditionalPanel("input.sidebar == 'vis' && input.t2 == 'distro'", selectInput(inputId = "var1", label = "Select the variable", choices = c1, selected = "NumberOfLanes")),
       conditionalPanel("input.sidebar == 'vis' && input.t2 == 'trends'", selectizeInput("var2", label = "Select variable type", choices = c1)),
-      conditionalPanel("input.sidebar == 'vis' && input.t2 == 'relation'", selectInput(inputId = "var3", label = "Select the X variable", choices = c1, selected = "Fatalities")),
-      conditionalPanel("input.sidebar == 'vis' && input.t2 == 'relation'", selectInput(inputId = "var4", label = "Select the Y variable", choices = c1, selected = "SpeedLimit"))
+      conditionalPanel("input.sidebar == 'vis' && input.t2 == 'relation'", selectInput(inputId = "var3", label = "Select the X variable", choices = c2, selected = "SpeedLimit")),
+      conditionalPanel("input.sidebar == 'vis' && input.t2 == 'relation'", selectInput(inputId = "var4", label = "Select the Y variable", choices = c2, selected = "Fatalities"))
     ) #sideBarMenu
   ),  #define dashboard side bar
   
@@ -251,7 +278,7 @@ server <- function(input, output, session) {
   
   #Creating scatter plot for relationships using ggplot
   output$scatter <- renderPlotly({
-    p <- allData2 %>% 
+    p <- state_sums %>% 
       ggplot(aes(x=get(input$var3), y=get(input$var4))) + 
       geom_point() +
       geom_smooth(method=get(input$fit)) +
@@ -281,7 +308,7 @@ server <- function(input, output, session) {
   
   #Bar charts - state wise trend
   output$bar <- renderPlotly({
-    allData2 %>% 
+    state_sums %>% 
       plot_ly() %>% 
       add_bars(x=~State, y=~get(input$var2)) %>% 
       layout(title = paste("Statewise View of", input$var2),
@@ -300,7 +327,7 @@ server <- function(input, output, session) {
   #Rendering table with 5 states with high rates for specific traffic accident attribute
   output$top5 <- renderTable({
     #Top 5 states with high fatality rates
-    allData2 %>% 
+    state_sums %>% 
       select(State, input$var2) %>% 
       arrange(desc(get(input$var2))) %>% 
       head(5)
@@ -309,7 +336,7 @@ server <- function(input, output, session) {
   #Rendering table with 5 states with low rates for specific traffic accident attribute
   output$low5 <- renderTable({
     #Top 5 states with low fatality rates
-    allData2 %>% 
+    state_sums %>% 
       select((State), input$var2) %>% 
       arrange((get(input$var2))) %>% 
       head(5)
